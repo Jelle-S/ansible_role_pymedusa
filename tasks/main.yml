@@ -1,0 +1,79 @@
+---
+- name: Ensure the pymedusa dependencies are installed
+  apt:
+    name: 
+      - git-core
+      - python3
+      - unrar
+      - virtualenv
+      - openssl
+      - mediainfo
+    state: present
+    update_cache: yes
+
+- name: Ensure {{ pymedusa_directory }}
+  file:
+    path: "{{ pymedusa_directory }}"
+    state: directory
+    owner: "{{ pymedusa_service_user }}"
+    group: "{{ pymedusa_service_group }}"
+    mode: u=rwX,g=rX,o=rX
+    recurse: yes
+
+- name: Clone pymedusa into {{ pymedusa_directory }}
+  git:
+    clone: true
+    dest: "{{ pymedusa_directory }}"
+    repo: https://github.com/pymedusa/Medusa.git
+    update: false
+
+- name: Create the medusa service
+  copy:
+    remote_src: yes
+    src: "{{ pymedusa_directory }}/runscripts/init.systemd"
+    dest: "/lib/systemd/system/medusa.service"
+    owner: root
+    group: root
+    mode: 0644
+
+- name: Create the pymedusa service config directory
+  file:
+    path: /etc/systemd/system/medusa.service.d
+    state: directory
+    owner: root
+    group: root
+
+- name: Configure medusa service.
+  template:
+    src: medusa-service-override.conf.j2
+    dest: /etc/systemd/system/medusa.service.d/override.conf
+    owner: root
+    group: root
+    mode: 0644
+
+- name: Stopping medusa service prior to configuration updates
+  systemd:
+    daemon_reload: yes
+    name: medusa
+    state: stopped
+
+- name: Ensure pymedusa configuration options
+  ini_file:
+    create: true
+    group: "{{ pymedusa_service_group }}"
+    owner: "{{ pymedusa_service_user }}"
+    mode: 0600
+    option: "{{ item.option }}"
+    section: "{{ item.section }}"
+    path: "{{ [pymedusa_directory, 'config.ini']|join('/') }}"
+    value: "{{ item.value }}"
+  loop: "{{ pymedusa_options }}"
+  loop_control:
+    label: "Setting {{ item.section }}.{{ item.option }} = {{ item.value }}"
+  when: pymedusa_options|length > 0
+
+- name: Ensure the medusa service is started and enabled on boot
+  service:
+    enabled: true
+    name: medusa
+    state: started

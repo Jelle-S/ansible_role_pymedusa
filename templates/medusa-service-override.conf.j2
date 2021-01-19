@@ -1,0 +1,13 @@
+#
+# Customize Medusa's config
+#
+# Identify this as a service override
+[Service]
+#
+#  These values are only needed if you wish to change user & group
+User={{ pymedusa_service_user }}
+Group={{ pymedusa_service_group }}
+
+# Clean ExecStart before redefining it.
+ExecStart=
+ExecStart=/usr/bin/python3 {{ pymedusa_directory }}/start.py -q --nolaunch --datadir={{ pymedusa_directory }}

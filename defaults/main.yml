@@ -1,0 +1,5 @@
+---
+pymedusa_directory: "/opt/medusa"
+pymedusa_service_user: "medusa"
+pymedusa_service_group: "medusa"
+pymedusa_options: []
